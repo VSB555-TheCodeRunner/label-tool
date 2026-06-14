@@ -54,23 +54,36 @@ def build_pdf(images, labels_per_page, margin_mm, gap_mm):
 
     if labels_per_page == 1:
         cols, rows = 1, 1
+
     elif labels_per_page == 2:
         cols, rows = 1, 2
+
     elif labels_per_page == 4:
         cols, rows = 2, 2
+
     else:
         cols, rows = 2, 3
+
 
     PAGE_W, PAGE_H = A4
 
     margin = margin_mm * mm
     gap = gap_mm * mm
 
-    usable_w = PAGE_W - 2 * margin - (gap if cols > 1 else 0)
-    usable_h = PAGE_H - 2 * margin - (gap if rows > 1 else 0)
+
+    # Total gaps between cells
+    total_gap_w = (cols - 1) * gap
+    total_gap_h = (rows - 1) * gap
+
+
+    # Remaining printable area
+    usable_w = PAGE_W - (2 * margin) - total_gap_w
+    usable_h = PAGE_H - (2 * margin) - total_gap_h
+
 
     cell_w = usable_w / cols
     cell_h = usable_h / rows
+
 
     buffer = io.BytesIO()
 
@@ -79,17 +92,27 @@ def build_pdf(images, labels_per_page, margin_mm, gap_mm):
     idx = 0
 
     for r in range(rows):
+
         for col in range(cols):
 
             if idx >= labels_per_page:
                 break
 
+
             img = images[idx % len(images)]
 
             img_reader = ImageReader(img)
 
-            x = margin + col * (cell_w + (gap if col > 0 else 0))
-            y = PAGE_H - margin - (r + 1) * cell_h - (gap if r > 0 else 0)
+
+            x = margin + col * (cell_w + gap)
+
+            y = (
+                PAGE_H
+                - margin
+                - (r + 1) * cell_h
+                - r * gap
+            )
+
 
             c.drawImage(
                 img_reader,
@@ -102,13 +125,13 @@ def build_pdf(images, labels_per_page, margin_mm, gap_mm):
 
             idx += 1
 
+
     c.showPage()
     c.save()
 
     buffer.seek(0)
 
     return buffer
-
 
 st.title("Label to A4 Generator")
 
